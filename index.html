@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Herz-Verhör</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+/* Layout: one narrow phone column, one screen at a time, big tap targets. Single dark party look on purpose. */
+:root{
+  --ink:#17112b; --card:#231a3f; --card2:#2e2452; --line:#3d3166;
+  --fg:#f6f1ff; --mute:#b2a7d4; --pink:#ff5fa2; --sun:#ffd23f; --mint:#5ee0c8; --bad:#ff7a6b;
+  --display:"Dela Gothic One","Arial Black",Impact,sans-serif;
+  --body:"Bricolage Grotesque",ui-rounded,"Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--ink);color:var(--fg);margin:0}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{font-family:var(--body);font-size:16px;line-height:1.45;min-height:100%;
+  background:radial-gradient(120% 60% at 50% -10%,#3a1f5e 0%,var(--ink) 60%) fixed,var(--ink)}
+.wrap{max-width:520px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.05;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:clamp(2.4rem,11vw,3.4rem)}
+h1 .h{color:var(--pink)}
+h2{font-size:1.7rem}
+h3{font-size:1.15rem}
+p{margin:0}
+.mute{color:var(--mute)}
+.small{font-size:.88rem}
+.label{font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row>*{min-width:0}
+.grow{flex:1 1 140px}
+button,.btn{font:inherit;font-weight:800;border:0;border-radius:14px;padding:14px 18px;cursor:pointer;
+  background:var(--card2);color:var(--fg);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+button:hover,.btn:hover{filter:brightness(1.12)}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.pri{background:var(--pink);color:#2a0717}
+.sun{background:var(--sun);color:#2b2100}
+.ghost{background:transparent;border:1px solid var(--line)}
+.wide{width:100%}
+.big{font-size:1.15rem;padding:18px}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+textarea{min-height:90px;resize:vertical}
+.pin{font-family:var(--display);font-size:2.6rem;letter-spacing:.18em;color:var(--sun);font-variant-numeric:tabular-nums}
+.pininput{font-family:var(--display);font-size:1.4rem;letter-spacing:.3em;text-align:center}
+.drop{border:2px dashed var(--line);border-radius:16px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+.drop.over{border-color:var(--pink);background:#ff5fa214}
+.drop input{display:none}
+.vids{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:0}
+.vids li{display:flex;gap:8px;align-items:center;background:var(--ink);border-radius:12px;padding:8px 8px 8px 14px}
+.vids li span{flex:1;min-width:0;font-weight:600}
+.vids a,.vids button{padding:8px 12px;font-size:.88rem;border-radius:10px}
+.players{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:0}
+.players li{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--ink);border-radius:12px}
+.dot{width:14px;height:14px;border-radius:50%;flex:none}
+.players .nm{flex:1;min-width:0;font-weight:700;overflow-wrap:anywhere}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 8px;border-radius:99px;background:var(--card2);color:var(--mute);white-space:nowrap}
+.tag.ok{background:#5ee0c822;color:var(--mint)}
+.tag.host{background:#ffd23f22;color:var(--sun)}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.chip{padding:16px 12px;border-radius:16px;background:var(--card2);border:2px solid transparent;font-weight:800;display:flex;align-items:center;gap:10px;justify-content:flex-start;overflow-wrap:anywhere}
+.chip.sel{border-color:var(--sun);background:#ffd23f1f}
+.chip.right{border-color:var(--mint)}
+.timer{height:10px;background:var(--ink);border-radius:99px;overflow:hidden}
+.timer i{display:block;height:100%;background:linear-gradient(90deg,var(--pink),var(--sun));border-radius:99px;transition:width .25s linear}
+.meta{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-variant-numeric:tabular-nums}
+.heart{font-size:3.2rem;line-height:1;color:var(--pink);text-align:center}
+@media (prefers-reduced-motion:no-preference){.heart.beat{animation:beat 1.2s ease-in-out infinite}}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.18)}30%{transform:scale(1)}45%{transform:scale(1.1)}}
+.reveal{text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center}
+.reveal .who{font-family:var(--display);font-size:2.2rem;overflow-wrap:anywhere}
+.score{display:flex;flex-direction:column;gap:6px;list-style:none;margin:0;padding:0;font-variant-numeric:tabular-nums}
+.score li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--ink)}
+.score .pos{width:1.6em;font-family:var(--display);color:var(--mute)}
+.score .nm{flex:1;min-width:0;font-weight:700;overflow-wrap:anywhere}
+.score .pts{font-weight:800}
+.score .plus{color:var(--mint);font-weight:800;font-size:.9rem}
+.score .minus{color:var(--bad);font-size:.9rem}
+.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.award{background:var(--ink);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.award b{font-family:var(--display);font-weight:400;font-size:1.05rem;color:var(--sun)}
+.note{background:#ffd23f14;border:1px solid #ffd23f44;color:var(--fg);border-radius:14px;padding:12px 14px;font-size:.92rem}
+.err{color:var(--bad);font-weight:600}
+details summary{cursor:pointer;font-weight:700;color:var(--mute)}
+details[open] summary{margin-bottom:8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--sun);color:#2b2100;font-weight:800;padding:12px 18px;border-radius:14px;max-width:calc(100% - 32px);z-index:20}
+.vid{width:100%;display:flex;justify-content:center}
+.vid:empty{display:none}
+.vid iframe{width:100%;max-width:400px;height:min(70vh,calc((100vw - 64px)*16/9));border:0;border-radius:16px;background:#000}
+.steps{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HOME -->
+  <section id="s-home" class="wrap" style="padding:0">
+    <header style="display:flex;flex-direction:column;gap:8px;padding-top:8px">
+      <p class="label">Partyspiel für Freunde</p>
+      <h1>Herz<span class="h">♥</span>Verhör</h1>
+      <p class="mute">Ein Video aus euren TikTok-Likes taucht auf. Wer hat es geliked? Ratet schnell, blufft gut.</p>
+    </header>
+    <div class="card">
+      <label class="label" for="nameIn">Dein Name</label>
+      <input id="nameIn" maxlength="20" placeholder="z. B. Elia" autocomplete="nickname">
+    </div>
+    <div id="roomBox" class="card">
+      <h3>Jeder mit eigenem Handy</h3>
+      <p class="small mute">Freunde öffnen einfach diese Seite und geben den PIN ein. Kein Konto nötig.</p>
+      <button id="btnCreate" class="pri big wide">Neues Spiel erstellen</button>
+      <div class="row">
+        <input id="pinIn" class="pininput grow" inputmode="numeric" maxlength="4" placeholder="PIN">
+        <button id="btnJoin" class="sun grow">Beitreten</button>
+      </div>
+      <p id="roomNote" class="small mute">Verbinde…</p>
+    </div>
+    <div class="card">
+      <h3>Ein Handy für alle</h3>
+      <p class="small mute">Funktioniert immer, auch ohne Verbindung: Alle laden ihre Likes auf einem Gerät, ihr ratet laut.</p>
+      <button id="btnLocal" class="ghost wide">Ein-Handy-Modus starten</button>
+    </div>
+    <details class="card">
+      <summary>So holst du deine Likes von TikTok</summary>
+      <ol class="steps small">
+        <li>TikTok → Profil → Menü ☰ → Einstellungen und Datenschutz → Konto → Deine Daten herunterladen.</li>
+        <li>Format <b>JSON</b> wählen, dann «Daten anfordern».</li>
+        <li>Nach ca. 1–4 Tagen kommt eine Benachrichtigung. Dann innert 4 Tagen herunterladen.</li>
+        <li>Die ZIP-Datei hier hochladen. Sie bleibt auf deinem Gerät, nur 20 zufällig gewählte Videos gehen ins Spiel.</li>
+      </ol>
+    </details>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="s-lobby" hidden class="wrap" style="padding:0">
+    <div class="card" style="align-items:center;text-align:center">
+      <p class="label">Spiel-PIN</p>
+      <div id="lobbyPin" class="pin">0000</div>
+      <p class="small mute" id="lobbyHint">Freunde öffnen diese Seite und geben den PIN ein.</p>
+    </div>
+    <div class="card">
+      <div class="meta"><h3>Deine Videos</h3><span id="poolCount" class="tag">0 / 8</span></div>
+      <div id="impRoom"></div>
+    </div>
+    <div class="card">
+      <div class="meta"><h3>Spieler</h3><span id="plCount" class="mute small"></span></div>
+      <ul id="lobbyPlayers" class="players"></ul>
+    </div>
+    <div id="hostBox" class="card" hidden>
+      <h3>Einstellungen</h3>
+      <div class="row">
+        <label class="grow small mute">Videos im Spiel
+          <select id="setTotal"><option>10</option><option selected>20</option><option>30</option><option>40</option><option>60</option></select></label>
+        <label class="grow small mute">Zeit pro Runde
+          <select id="setDur"><option value="30">30 s</option><option value="45" selected>45 s</option><option value="60">60 s</option><option value="90">90 s</option></select></label>
+      </div>
+      <button id="btnStart" class="pri big wide">Spiel starten</button>
+      <p id="startNote" class="small mute"></p>
+    </div>
+    <p id="waitHost" class="mute small" hidden>Warte, bis der Gastgeber startet…</p>
+    <button id="btnLeave" class="ghost">Verlassen</button>
+  </section>
+
+  <!-- PLAY -->
+  <section id="s-play" hidden class="wrap" style="padding:0">
+    <div class="meta"><span class="label" id="playRound">Runde 1 / 9</span><span id="playTime" class="label">45 s</span></div>
+    <div class="timer"><i id="playBar" style="width:100%"></i></div>
+    <div class="card" style="align-items:center;text-align:center">
+      <div class="heart beat">♥</div>
+      <h2>Wer hat das geliked?</h2>
+      <div id="playVid" class="vid"></div>
+      <a id="playLink" class="btn ghost wide" href="#" target="_blank" rel="noopener">Video in TikTok öffnen ↗</a>
+      <p id="ownNote" class="note" hidden>Das ist eines deiner Likes! Tipp trotzdem jemanden, damit es niemand merkt.</p>
+    </div>
+    <div id="playChips" class="chips"></div>
+    <p id="playStatus" class="mute small"></p>
+  </section>
+
+  <!-- REVEAL -->
+  <section id="s-rev" hidden class="wrap" style="padding:0">
+    <div class="card reveal">
+      <p class="label" id="revRound">Runde 1</p>
+      <p class="mute">Geliked hat es…</p>
+      <div id="revWho" class="who">?</div>
+      <a id="revLink" class="small mute" href="#" target="_blank" rel="noopener">Video nochmals ansehen ↗</a>
+    </div>
+    <div class="card">
+      <h3>Tipps</h3>
+      <ul id="revList" class="score"></ul>
+    </div>
+    <div class="card">
+      <h3>Rangliste</h3>
+      <ul id="revScore" class="score"></ul>
+    </div>
+    <button id="btnNext" class="pri big" hidden>Nächste Runde</button>
+    <p id="revWait" class="mute small" hidden>Der Gastgeber startet gleich die nächste Runde.</p>
+  </section>
+
+  <!-- END -->
+  <section id="s-end" hidden class="wrap" style="padding:0">
+    <div class="card reveal">
+      <p class="label">Gewonnen hat</p>
+      <div id="endWho" class="who">?</div>
+    </div>
+    <div class="card"><h3>Awards</h3><div id="endAwards" class="awards"></div></div>
+    <div class="card"><h3>Endstand</h3><ul id="endScore" class="score"></ul></div>
+    <button id="btnAgain" class="pri big" hidden>Neue Runde mit allen</button>
+    <button id="btnHome" class="ghost">Zum Start</button>
+  </section>
+
+  <!-- LOCAL SETUP -->
+  <section id="s-lset" hidden class="wrap" style="padding:0">
+    <h2>Ein Handy für alle</h2>
+    <div class="card">
+      <h3>Spieler</h3>
+      <ul id="lPlayers" class="players"></ul>
+      <p id="lEmpty" class="small mute">Noch niemand. Füge mindestens 2 Spieler hinzu.</p>
+    </div>
+    <div class="card">
+      <h3>Spieler hinzufügen</h3>
+      <input id="lName" maxlength="20" placeholder="Name">
+      <div id="impLocal"></div>
+      <button id="lAdd" class="sun">Hinzufügen</button>
+      <p id="lErr" class="err small" hidden></p>
+    </div>
+    <div class="card">
+      <label class="small mute">Videos im Spiel
+        <select id="lPer"><option>10</option><option selected>20</option><option>30</option><option>40</option><option>60</option></select></label>
+      <button id="lStart" class="pri big wide" disabled>Spiel starten</button>
+    </div>
+    <button class="ghost" data-home>Zurück</button>
+  </section>
+
+  <!-- LOCAL PLAY -->
+  <section id="s-lplay" hidden class="wrap" style="padding:0">
+    <div class="meta"><span class="label" id="lRound">Runde 1 / 6</span><button class="ghost small" data-home style="padding:8px 12px">Beenden</button></div>
+    <div class="card" style="align-items:center;text-align:center">
+      <div class="heart beat">♥</div>
+      <h2>Wer hat das geliked?</h2>
+      <div id="lVid" class="vid"></div>
+      <a id="lLink" class="btn ghost wide" href="#" target="_blank" rel="noopener">Video in TikTok öffnen ↗</a>
+      <p class="small mute" id="lHint">Schaut das Video und ratet laut. Dann auflösen.</p>
+      <button id="lReveal" class="pri wide">Auflösen</button>
+    </div>
+    <div id="lRevBox" class="card" hidden>
+      <div class="reveal"><p class="mute">Geliked hat es…</p><div id="lWho" class="who"></div></div>
+      <p class="label">Wer lag richtig? Antippen</p>
+      <div id="lChips" class="chips"></div>
+      <button id="lNext" class="pri big">Weiter</button>
+    </div>
+    <div class="card"><h3>Rangliste</h3><ul id="lScore" class="score"></ul></div>
+  </section>
+
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(() => {
+const APP = 'hv1', POOL = 20;
+const COLORS = ['#ff5fa2','#ffd23f','#5ee0c8','#8fa8ff','#ff8a4c','#c792ff','#9be564','#ff6b6b'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => n.toLocaleString('de-CH');
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const rid = () => Math.random().toString(36).slice(2, 8);
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem('hv-' + k)); } catch(e){ return null; } },
+  set(k, v){ try { localStorage.setItem('hv-' + k, JSON.stringify(v)); } catch(e){} }
+};
+let K = null; try { K = sessionStorage.getItem('hv-k'); } catch(e){}
+if (!K) { K = rid() + rid(); try { sessionStorage.setItem('hv-k', K); } catch(e){} }
+
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 3200); }
+function show(id){ document.querySelectorAll('section[id^="s-"]').forEach(s => { s.hidden = s.id !== id; if (s.hidden) s.querySelectorAll('.vid').forEach(v => v.innerHTML = ''); }); window.scrollTo(0, 0); }
+function setVid(sel, it){ const el = document.querySelector(sel); it = String(it || '');
+  el.innerHTML = /^\d+$/.test(it) ? `<iframe src="https://www.tiktok.com/player/v1/${it}?description=0&music_info=0&rel=0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen title="TikTok-Video"></iframe>` : ''; }
+
+/* ---------- Likes einlesen ---------- */
+function normItem(s){
+  s = String(s).trim();
+  const m = s.match(/(?:\/video\/|\/v\/)(\d{8,})/); if (m) return m[1];
+  if (/^\d{15,}$/.test(s)) return s;
+  const u = s.match(/^https?:\/\/(?:[a-z0-9-]+\.)*tiktokv?\.com\/\S+/i); if (u) return u[0].slice(0, 100);
+  return null;
+}
+const linkFor = it => /^\d+$/.test(it) ? `https://www.tiktokv.com/share/video/${it}/` : it;
+function likesFromJson(o){
+  const out = []; let found = false;
+  (function walk(n, inLike){
+    if (Array.isArray(n)) { n.forEach(x => walk(x, inLike)); return; }
+    if (n && typeof n === 'object') { for (const [k, v] of Object.entries(n)) { const isL = /like\s*list/i.test(k); if (isL) found = true; walk(v, inLike || isL); } return; }
+    if (inLike && typeof n === 'string') { const it = normItem(n); if (it) out.push(it); }
+  })(o, false);
+  return { found, items: [...new Set(out)] };
+}
+function likesFromTxt(t){
+  const out = []; let inL = false, found = false;
+  for (const raw of t.split(/\r?\n/)) {
+    const l = raw.trim();
+    if (/like\s*list/i.test(l)) { inL = true; found = true; continue; }
+    if (inL && out.length && /^[A-Za-zÄÖÜäöü][A-Za-zÄÖÜäöü &]+:?$/.test(l) && !/^(date|link)/i.test(l)) inL = false;
+    if (inL) { const m = l.match(/https?:\/\/\S+/); if (m) { const it = normItem(m[0]); if (it) out.push(it); } }
+  }
+  return { found, items: [...new Set(out)] };
+}
+function parseText(t, name){
+  if (/\.json$/i.test(name) || /^\s*[{[]/.test(t)) { try { return likesFromJson(JSON.parse(t)); } catch(e){} }
+  return likesFromTxt(t);
+}
+async function readFile(f){
+  if (/\.zip$/i.test(f.name)) {
+    if (!window.JSZip) throw new Error('Die ZIP-Datei kann hier nicht geöffnet werden. Entpacke sie und lade die .json-Datei hoch.');
+    const z = await JSZip.loadAsync(f);
+    const files = Object.values(z.files).filter(x => !x.dir && /\.(json|txt)$/i.test(x.name));
+    files.sort((a, b) => (/user_data/i.test(b.name) - /user_data/i.test(a.name)) || (/\.json$/i.test(b.name) - /\.json$/i.test(a.name)));
+    for (const x of files) { const r = parseText(await x.async('string'), x.name); if (r.items.length) return r; }
+    return { found: false, items: [] };
+  }
+  return parseText(await f.text(), f.name);
+}
+
+/* Importer: Datei oder Links → Pool von bis zu 8 Videos */
+function importer(el, st, onChange, remember){
+  function pick(){ st.pool = shuffle([...st.likes]).slice(0, POOL); }
+  function draw(msg){
+    if (!st.likes.length) {
+      el.innerHTML = `
+        <label class="drop" tabindex="0"><input type="file" accept=".zip,.json,.txt,application/zip,application/json,text/plain">
+          <b>TikTok-Datei hochladen</b><span class="small mute">ZIP, JSON oder TXT aus «Deine Daten herunterladen»</span></label>
+        <details><summary>Oder Links einfügen</summary>
+          <textarea placeholder="Links von gelikten Videos, einer pro Zeile"></textarea>
+          <button type="button" class="ghost wide" data-paste>Links übernehmen</button></details>
+        ${msg ? `<p class="err small">${esc(msg)}</p>` : ''}`;
+      const drop = el.querySelector('.drop'), inp = el.querySelector('input');
+      inp.onchange = () => inp.files[0] && load(inp.files[0]);
+      drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } };
+      drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+      drop.ondragleave = () => drop.classList.remove('over');
+      drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) load(f); };
+      el.querySelector('[data-paste]').onclick = () => {
+        const txt = el.querySelector('textarea').value;
+        const items = [...new Set((txt.match(/https?:\/\/\S+/g) || []).map(normItem).filter(Boolean))];
+        if (!items.length) return draw('Keine TikTok-Links gefunden. Kopiere sie über «Teilen → Link kopieren».');
+        set(items);
+      };
+      return;
+    }
+    const left = st.likes.length - st.pool.length;
+    el.innerHTML = `
+      <p class="small"><b>♥ ${fmt(st.likes.length)} Likes</b> <span class="mute">geladen. Zufällig gewählt, nur diese gehen ins Spiel:</span></p>
+      <ul class="vids">${st.pool.map((it, i) => `<li><span>Video ${i + 1}</span>
+        <a class="btn" href="${esc(linkFor(it))}" target="_blank" rel="noopener">ansehen ↗</a>
+        <button type="button" data-swap="${i}">${left > 0 ? 'tauschen' : 'entfernen'}</button></li>`).join('')}</ul>
+      <div class="row"><button type="button" class="ghost grow" data-mix>Neu mischen</button><button type="button" class="ghost grow" data-reset>Andere Datei</button></div>`;
+    el.querySelectorAll('[data-swap]').forEach(b => b.onclick = () => {
+      const i = +b.dataset.swap, used = new Set(st.pool);
+      const rest = st.likes.filter(x => !used.has(x));
+      if (rest.length) st.pool[i] = rest[Math.floor(Math.random() * rest.length)]; else st.pool.splice(i, 1);
+      draw(); onChange();
+    });
+    el.querySelector('[data-mix]').onclick = () => { pick(); draw(); onChange(); };
+    el.querySelector('[data-reset]').onclick = () => { st.likes = []; st.pool = []; if (remember) store.set('likes', null); draw(); onChange(); };
+  }
+  function set(items){ st.likes = items; pick(); if (remember) store.set('likes', items.slice(0, 30000)); draw(); onChange(); }
+  async function load(f){
+    el.querySelector('.drop b').textContent = 'Lese Datei…';
+    try {
+      const r = await readFile(f);
+      if (!r.items.length) return draw(r.found ? 'In der Datei ist die Like-Liste leer.' : 'Keine Like-Liste gefunden. Wähle beim Datenexport auch «Aktivität» bzw. die Likes aus.');
+      set(r.items);
+    } catch (e) { draw(e.message || 'Die Datei konnte nicht gelesen werden.'); }
+  }
+  draw();
+  return { redraw: () => draw() };
+}
+
+/* ---------- Online-Modus (room) ---------- */
+const S = { name: store.get('name') || '', color: store.get('color') || COLORS[Math.floor(Math.random() * COLORS.length)],
+  pin: '', isHost: false, room: null, peers: [], guess: null, roundKey: null, localStart: 0, joinedAt: 0,
+  imp: { likes: store.get('likes') || [], pool: [] } };
+store.set('color', S.color);
+if (S.imp.likes.length) S.imp.pool = shuffle([...S.imp.likes]).slice(0, POOL);
+let G = null; // nur beim Gastgeber
+
+$('#nameIn').value = S.name;
+$('#nameIn').oninput = e => { S.name = e.target.value.trim().slice(0, 20); store.set('name', S.name); };
+
+function myName(){ return S.name || 'Ohne Name'; }
+function push(){
+  if (!S.room || !S.pin) return;
+  S.room.presence({ app: APP, pin: S.pin, k: K, n: myName(), c: S.color, pool: S.imp.pool,
+    host: S.isHost || null, g: S.isHost ? pub() : null, gs: S.guess }).catch(() => {});
+}
+function roster(){
+  const m = new Map();
+  for (const p of S.peers) {
+    if (p.sameTab) continue;
+    const pr = p.presence || {};
+    if (pr.app !== APP || pr.pin !== S.pin || typeof pr.k !== 'string') continue;
+    m.set(pr.k, { k: pr.k, n: String(pr.n || '?').slice(0, 20), c: /^#[0-9a-f]{6}$/i.test(pr.c) ? pr.c : '#b2a7d4',
+      pool: Array.isArray(pr.pool) ? pr.pool.filter(x => typeof x === 'string').slice(0, 12) : [],
+      host: !!pr.host, g: pr.g && typeof pr.g === 'object' ? pr.g : null, gs: pr.gs && typeof pr.gs === 'object' ? pr.gs : null });
+  }
+  m.set(K, { k: K, n: myName(), c: S.color, pool: S.imp.pool, host: S.isHost, g: S.isHost ? pub() : null, gs: S.guess, me: true });
+  return [...m.values()];
+}
+const hostView = () => S.isHost ? pub() : (roster().find(p => p.host && p.g) || {}).g || null;
+
+const NET = { peer: null, conn: null, conns: new Map(), pres: {}, hostPres: null, t: 0 };
+const PFX = 'herzverhoer-spiel-';
+function netPush(p){ if (S.isHost) { NET.hostPres = p; netBroadcast(); } else if (NET.conn && NET.conn.open) NET.conn.send({ t: 'p', p }); }
+function netBroadcast(){
+  clearTimeout(NET.t);
+  NET.t = setTimeout(() => {
+    const list = [NET.hostPres, ...Object.values(NET.pres)].filter(Boolean);
+    for (const c of NET.conns.values()) if (c.open) c.send({ t: 'all', list });
+    S.peers = list.map(p => ({ presence: p })); onRoom();
+  }, 40);
+}
+function netReset(){ try { if (NET.peer) NET.peer.destroy(); } catch(e){} NET.peer = null; NET.conn = null; NET.conns.clear(); NET.pres = {}; NET.hostPres = null; S.peers = []; }
+function netHost(pin, ok, fail){
+  netReset(); const peer = new Peer(PFX + pin); NET.peer = peer;
+  peer.on('open', ok);
+  peer.on('connection', c => {
+    c.on('open', () => { NET.conns.set(c.peer, c); netBroadcast(); });
+    c.on('data', d => { if (d && d.t === 'p' && d.p && typeof d.p === 'object' && Object.keys(NET.pres).length < 30) { NET.pres[c.peer] = d.p; netBroadcast(); } });
+    c.on('close', () => { NET.conns.delete(c.peer); delete NET.pres[c.peer]; netBroadcast(); });
+  });
+  peer.on('disconnected', () => { try { peer.reconnect(); } catch(e){} });
+  peer.on('error', fail);
+}
+function netJoin(pin, ok, fail){
+  netReset(); const peer = new Peer(); NET.peer = peer;
+  peer.on('open', () => {
+    const c = peer.connect(PFX + pin, { reliable: true }); NET.conn = c;
+    c.on('open', ok);
+    c.on('data', d => { if (d && d.t === 'all' && Array.isArray(d.list)) { S.peers = d.list.slice(0, 31).filter(p => p && typeof p === 'object').map(p => ({ presence: p })); onRoom(); } });
+    c.on('close', () => { if (S.pin === pin && NET.conn === c) { toast('Verbindung zum Gastgeber verloren.'); S.peers = []; onRoom(); } });
+  });
+  peer.on('error', fail);
+}
+if (window.Peer) { S.room = { presence: async p => netPush(p) }; $('#roomNote').textContent = 'Erstelle ein Spiel oder gib den PIN deiner Freunde ein.'; }
+else roomOff();
+function roomOff(){
+  S.room = null;
+  $('#btnCreate').disabled = $('#btnJoin').disabled = true;
+  $('#roomNote').innerHTML = 'Der Verbindungsdienst konnte nicht geladen werden. Lade die Seite neu oder nutze den <b>Ein-Handy-Modus</b>.';
+}
+
+const impRoom = importer($('#impRoom'), S.imp, () => { push(); drawLobby(); }, true);
+
+$('#btnCreate').onclick = () => {
+  if (!S.name) { $('#nameIn').focus(); return toast('Gib zuerst deinen Namen ein.'); }
+  const btn = $('#btnCreate'); btn.disabled = true; btn.textContent = 'Erstelle Spiel…';
+  const done = () => { btn.disabled = false; btn.textContent = 'Neues Spiel erstellen'; };
+  const go = tries => {
+    const pin = String(Math.floor(1000 + Math.random() * 9000));
+    netHost(pin, () => {
+      done(); S.pin = pin; S.isHost = true;
+      G = { id: rid(), ph: 'lobby', i: 0, total: +$('#setTotal').value || 20, dur: +$('#setDur').value || 45, rounds: [], pl: [], sc: {}, st: {}, res: null, aw: null };
+      enterLobby();
+    }, e => {
+      if (e && e.type === 'unavailable-id' && tries < 5) return go(tries + 1);
+      done(); if (!S.pin) toast('Spiel konnte nicht erstellt werden. Prüfe die Internetverbindung.');
+    });
+  };
+  go(0);
+};
+$('#btnJoin').onclick = () => {
+  const pin = $('#pinIn').value.replace(/\D/g, '');
+  if (!S.name) { $('#nameIn').focus(); return toast('Gib zuerst deinen Namen ein.'); }
+  if (pin.length !== 4) return toast('Der PIN hat 4 Ziffern.');
+  const btn = $('#btnJoin'); btn.disabled = true; btn.textContent = 'Verbinde…';
+  const done = () => { btn.disabled = false; btn.textContent = 'Beitreten'; };
+  netJoin(pin, () => { done(); S.pin = pin; S.isHost = false; G = null; enterLobby(); },
+    e => { done(); if (S.pin) return; toast(e && e.type === 'peer-unavailable' ? 'Kein Spiel mit diesem PIN gefunden. Prüfe den PIN.' : 'Verbindung fehlgeschlagen. Versuch es nochmals.'); });
+};
+$('#pinIn').onkeydown = e => { if (e.key === 'Enter') $('#btnJoin').click(); };
+function enterLobby(){ S.guess = null; S.roundKey = null; $('#lobbyPin').textContent = S.pin; impRoom.redraw(); show('s-lobby'); push(); drawLobby(); }
+$('#btnLeave').onclick = () => { S.pin = ''; S.isHost = false; G = null; netReset(); lastPh = ''; show('s-home'); };
+$('#setTotal').onchange = e => { if (G) { G.total = +e.target.value; push(); drawLobby(); } };
+$('#setDur').onchange = e => { if (G) { G.dur = +e.target.value; push(); } };
+
+function drawLobby(){
+  if (!S.pin) return;
+  const ros = roster(), hv = hostView();
+  $('#poolCount').textContent = `${S.imp.pool.length} / ${POOL}`;
+  $('#poolCount').className = 'tag' + (S.imp.pool.length ? ' ok' : '');
+  $('#plCount').textContent = `${ros.length} dabei`;
+  $('#lobbyPlayers').innerHTML = ros.map(p => `<li><span class="dot" style="background:${p.c}"></span>
+    <span class="nm">${esc(p.n)}${p.me ? ' <span class="mute small">(du)</span>' : ''}</span>
+    ${p.host ? '<span class="tag host">Gastgeber</span>' : ''}
+    <span class="tag ${p.pool.length ? 'ok' : ''}">${p.pool.length ? p.pool.length + ' Videos' : 'lädt noch'}</span></li>`).join('');
+  $('#hostBox').hidden = !S.isHost;
+  $('#waitHost').hidden = S.isHost;
+  $('#waitHost').textContent = hv ? 'Warte, bis der Gastgeber startet…' : 'Suche das Spiel… Ist der Gastgeber noch auf der Seite?';
+  if (S.isHost) {
+    const ready = ros.filter(p => p.pool.length);
+    $('#btnStart').disabled = ready.length < 2;
+    $('#startNote').textContent = ready.length < 2 ? 'Mindestens 2 Spieler brauchen Videos.' :
+      `${ready.length} Spieler mit Videos → ${Math.min(G.total, ready.reduce((s, p) => s + p.pool.length, 0))} Runden, zufällig gemischt.` + (ready.length < ros.length ? ' Wer noch keine Videos hat, spielt nur mit Raten.' : '');
+  }
+}
+
+/* Gastgeber-Logik */
+function pub(){
+  if (!G) return null;
+  const r = G.rounds[G.i];
+  return { id: G.id, ph: G.ph, i: G.i, n: G.rounds.length, dur: G.dur, pl: G.pl, sc: G.sc,
+    v: (G.ph === 'play' || G.ph === 'rev') && r ? r.v : null, o: G.ph === 'rev' && r ? r.o : null,
+    res: G.ph === 'rev' ? G.res : null, aw: G.ph === 'end' ? G.aw : null };
+}
+$('#btnStart').onclick = () => {
+  const ros = roster(); const ps = ros.filter(p => p.pool.length);
+  if (ps.length < 2) return;
+  G.pl = ros.map(p => ({ k: p.k, n: p.n, c: p.c }));
+  let rounds = [];
+  ps.forEach(p => p.pool.forEach(v => rounds.push({ v, o: p.k })));
+  rounds = shuffle(rounds).slice(0, G.total);
+  for (let i = 1; i < rounds.length; i++) if (rounds[i].o === rounds[i - 1].o) { const j = rounds.findIndex((r, x) => x > i && r.o !== rounds[i].o && (!rounds[x - 1] || rounds[x - 1].o !== rounds[i].o)); if (j > 0) [rounds[i], rounds[j]] = [rounds[j], rounds[i]]; }
+  G.rounds = rounds; G.sc = {}; G.st = {}; G.id = rid(); G.i = 0;
+  G.pl.forEach(p => { G.sc[p.k] = 0; G.st[p.k] = { ok: 0, fool: 0, sus: 0, t: 0 }; });
+  beginRound();
+};
+function beginRound(){ G.ph = 'play'; G.start = Date.now(); G.res = null; push(); onRoom(); }
+function hostTick(){
+  if (!S.isHost || !G || G.ph !== 'play') return;
+  const r = G.rounds[G.i], rk = G.id + ':' + G.i, ros = roster();
+  const need = G.pl.filter(p => p.k !== r.o && ros.some(x => x.k === p.k));
+  const all = need.length > 0 && need.every(p => { const x = ros.find(y => y.k === p.k); return x.gs && x.gs.r === rk; });
+  if (all || Date.now() - G.start > G.dur * 1000 + 1500) reveal();
+}
+function reveal(){
+  const r = G.rounds[G.i], rk = G.id + ':' + G.i, ros = roster(), res = {}, D = G.dur * 1000;
+  let wrong = 0;
+  for (const p of G.pl) {
+    if (p.k === r.o) continue;
+    const x = ros.find(y => y.k === p.k), g = x && x.gs && x.gs.r === rk ? x.gs : null;
+    if (!g || typeof g.p !== 'string') { res[p.k] = { p: null, ok: false, pts: 0 }; continue; }
+    const ok = g.p === r.o, t = Math.max(0, Math.min(D, +g.t || 0));
+    let pts = 0;
+    if (ok) { pts = 100 + Math.round(100 * (1 - t / D)); G.st[p.k].ok++; G.st[p.k].t += t; }
+    else { wrong++; if (G.st[g.p]) G.st[g.p].sus++; }
+    G.sc[p.k] += pts; res[p.k] = { p: g.p, ok, pts };
+  }
+  const fp = wrong * 50;
+  G.sc[r.o] = (G.sc[r.o] || 0) + fp; if (G.st[r.o]) G.st[r.o].fool += wrong;
+  res[r.o] = { own: true, pts: fp };
+  G.res = res; G.ph = 'rev'; push(); onRoom();
+}
+$('#btnNext').onclick = () => {
+  if (!G) return;
+  if (G.i + 1 < G.rounds.length) { G.i++; beginRound(); }
+  else { G.ph = 'end'; G.aw = awards(); push(); onRoom(); }
+};
+$('#btnAgain').onclick = () => { if (!G) return; G.ph = 'lobby'; G.rounds = []; G.res = null; G.aw = null; push(); onRoom(); };
+$('#btnHome').onclick = () => $('#btnLeave').click();
+function awards(){
+  const best = (f, min) => { let k = null, v = -Infinity; for (const p of G.pl) { const s = G.st[p.k]; if (!s) continue; const x = f(s); if (x !== null && x > v) { v = x; k = p.k; } } return k !== null && v > (min ?? 0) ? { k, v } : null; };
+  const out = [];
+  const a = best(s => s.ok); if (a) out.push({ t: 'Detektiv', d: `${a.v} richtig erraten`, k: a.k });
+  const b = best(s => s.fool); if (b) out.push({ t: 'Pokerface', d: `${b.v}× alle reingelegt`, k: b.k });
+  const c = best(s => s.ok ? -s.t / s.ok : null, -Infinity); if (c) out.push({ t: 'Blitzmerker', d: `im Schnitt ${(-c.v / 1000).toFixed(1)} s`, k: c.k });
+  const d = best(s => s.sus); if (d) out.push({ t: 'Hauptverdächtig', d: `${d.v}× zu Unrecht getippt`, k: d.k });
+  return out;
+}
+setInterval(() => { hostTick(); tickTimer(); }, 300);
+
+/* Anzeige für alle */
+function plMap(hv){ const m = {}; (hv.pl || []).forEach(p => m[p.k] = { n: String(p.n || '?').slice(0, 20), c: /^#[0-9a-f]{6}$/i.test(p.c) ? p.c : '#b2a7d4' }); return m; }
+function scoreHtml(hv, res){
+  const m = plMap(hv), sc = hv.sc || {};
+  return Object.keys(m).sort((a, b) => (sc[b] || 0) - (sc[a] || 0)).map((k, i) => {
+    const r = res && res[k];
+    return `<li><span class="pos">${i + 1}</span><span class="dot" style="background:${m[k].c}"></span>
+      <span class="nm">${esc(m[k].n)}${k === K ? ' <span class="mute small">(du)</span>' : ''}</span>
+      ${r && r.pts ? `<span class="plus">+${r.pts}</span>` : ''}<span class="pts">${fmt(+sc[k] || 0)}</span></li>`;
+  }).join('');
+}
+let lastPh = '';
+function onRoom(){
+  if (!S.pin) return;
+  const hv = hostView();
+  if (!hv || hv.ph === 'lobby') { if (lastPh !== 'lobby') { show('s-lobby'); lastPh = 'lobby'; } drawLobby(); return; }
+  const m = plMap(hv), rk = hv.id + ':' + hv.i;
+  if (hv.ph === 'play') {
+    if (S.roundKey !== rk) { S.roundKey = rk; S.localStart = Date.now(); S.guess = null; push(); }
+    if (lastPh !== 'play:' + rk) { show('s-play'); lastPh = 'play:' + rk; setVid('#playVid', hv.v); }
+    $('#playRound').textContent = `Runde ${hv.i + 1} / ${hv.n}`;
+    $('#playLink').href = linkFor(String(hv.v || ''));
+    const own = S.imp.pool.includes(hv.v);
+    $('#ownNote').hidden = !own;
+    const picked = S.guess && S.guess.r === rk ? S.guess.p : null;
+    $('#playChips').innerHTML = Object.keys(m).map(k => `<button class="chip${picked === k ? ' sel' : ''}" data-k="${esc(k)}" ${picked ? 'disabled' : ''}>
+      <span class="dot" style="background:${m[k].c}"></span>${esc(m[k].n)}${k === K ? ' (du)' : ''}</button>`).join('');
+    $('#playChips').querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+      if (S.guess && S.guess.r === rk) return;
+      S.guess = { r: rk, p: b.dataset.k, t: Date.now() - S.localStart }; push(); onRoom();
+    });
+    const ros = roster(); const done = Object.keys(m).filter(k => { const x = ros.find(y => y.k === k); return x && x.gs && x.gs.r === rk; }).length;
+    $('#playStatus').textContent = picked ? `Getippt! ${done} von ${Object.keys(m).length} haben gewählt.` : 'Tippe auf die Person, die es geliked hat. Schnell sein gibt Extrapunkte.';
+    tickTimer();
+  } else if (hv.ph === 'rev') {
+    if (lastPh !== 'rev:' + rk) { show('s-rev'); lastPh = 'rev:' + rk; }
+    const o = m[hv.o] || { n: '?', c: '#fff' }, res = hv.res || {};
+    $('#revRound').textContent = `Runde ${hv.i + 1} / ${hv.n}`;
+    $('#revWho').textContent = o.n; $('#revWho').style.color = o.c;
+    $('#revLink').href = linkFor(String(hv.v || ''));
+    $('#revList').innerHTML = Object.keys(m).filter(k => k !== hv.o).map(k => {
+      const r = res[k] || {}; const tip = r.p && m[r.p] ? m[r.p].n : 'kein Tipp';
+      return `<li><span class="dot" style="background:${m[k].c}"></span><span class="nm">${esc(m[k].n)} <span class="mute small">→ ${esc(tip)}</span></span>
+        ${r.ok ? `<span class="plus">✓ +${r.pts}</span>` : '<span class="minus">✗</span>'}</li>`;
+    }).join('') + (res[hv.o] && res[hv.o].pts ? `<li><span class="dot" style="background:${o.c}"></span><span class="nm">${esc(o.n)} <span class="mute small">Bluff-Bonus</span></span><span class="plus">+${res[hv.o].pts}</span></li>` : '');
+    $('#revScore').innerHTML = scoreHtml(hv, res);
+    $('#btnNext').hidden = !S.isHost; $('#revWait').hidden = S.isHost;
+    $('#btnNext').textContent = hv.i + 1 < hv.n ? 'Nächste Runde' : 'Zum Endstand';
+  } else if (hv.ph === 'end') {
+    if (lastPh !== 'end:' + hv.id) { show('s-end'); lastPh = 'end:' + hv.id; }
+    const sc = hv.sc || {}, ks = Object.keys(m).sort((a, b) => (sc[b] || 0) - (sc[a] || 0));
+    $('#endWho').textContent = ks.length ? m[ks[0]].n : '?'; $('#endWho').style.color = ks.length ? m[ks[0]].c : '';
+    $('#endAwards').innerHTML = (hv.aw || []).filter(a => m[a.k]).map(a => `<div class="award"><b>${esc(a.t)}</b><span>${esc(m[a.k].n)}</span><span class="small mute">${esc(a.d)}</span></div>`).join('') || '<p class="mute small">Keine Awards diesmal.</p>';
+    $('#endScore').innerHTML = scoreHtml(hv, null);
+    $('#btnAgain').hidden = !S.isHost;
+  }
+}
+function tickTimer(){
+  if ($('#s-play').hidden) return;
+  const hv = hostView(); if (!hv || hv.ph !== 'play') return;
+  const left = Math.max(0, hv.dur - (Date.now() - S.localStart) / 1000);
+  $('#playTime').textContent = Math.ceil(left) + ' s';
+  $('#playBar').style.width = (100 * left / hv.dur) + '%';
+}
+
+/* ---------- Ein-Handy-Modus ---------- */
+const L = { players: [], draft: { likes: [], pool: [] }, rounds: [], i: 0, sc: {}, right: new Set() };
+const impLocal = importer($('#impLocal'), L.draft, () => {}, false);
+$('#btnLocal').onclick = () => { show('s-lset'); drawLset(); };
+document.querySelectorAll('[data-home]').forEach(b => b.onclick = () => show('s-home'));
+function drawLset(){
+  $('#lPlayers').innerHTML = L.players.map((p, i) => `<li><span class="dot" style="background:${p.c}"></span><span class="nm">${esc(p.n)}</span>
+    <span class="tag ok">${p.pool.length} Videos</span><button class="ghost small" style="padding:6px 10px" data-del="${i}">✕</button></li>`).join('');
+  $('#lEmpty').hidden = L.players.length > 0;
+  $('#lPlayers').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { L.players.splice(+b.dataset.del, 1); drawLset(); });
+  $('#lStart').disabled = L.players.length < 2;
+}
+$('#lAdd').onclick = () => {
+  const n = $('#lName').value.trim().slice(0, 20), e = $('#lErr');
+  if (!n) { e.textContent = 'Gib einen Namen ein.'; e.hidden = false; return; }
+  if (!L.draft.pool.length) { e.textContent = 'Lade zuerst die Likes dieser Person.'; e.hidden = false; return; }
+  e.hidden = true;
+  L.players.push({ n, c: COLORS[L.players.length % COLORS.length], pool: [...L.draft.pool] });
+  $('#lName').value = ''; L.draft.likes = []; L.draft.pool = []; impLocal.redraw(); drawLset();
+  toast(`${n} ist dabei. Gib das Handy weiter.`);
+};
+$('#lStart').onclick = () => {
+  const per = +$('#lPer').value; L.rounds = []; L.sc = {};
+  L.players.forEach((p, k) => { L.sc[k] = 0; p.pool.forEach(v => L.rounds.push({ v, o: k })); });
+  L.rounds = shuffle(L.rounds).slice(0, per); L.i = 0; show('s-lplay'); drawLround();
+};
+function drawLround(){
+  const r = L.rounds[L.i];
+  $('#lRound').textContent = `Runde ${L.i + 1} / ${L.rounds.length}`;
+  $('#lLink').href = linkFor(r.v); setVid('#lVid', r.v); $('#lRevBox').hidden = true; $('#lReveal').hidden = false; L.right = new Set();
+  drawLscore();
+}
+$('#lReveal').onclick = () => {
+  const r = L.rounds[L.i], o = L.players[r.o];
+  $('#lWho').textContent = o.n; $('#lWho').style.color = o.c; $('#lReveal').hidden = true; $('#lRevBox').hidden = false;
+  $('#lChips').innerHTML = L.players.map((p, k) => k === r.o ? '' : `<button class="chip" data-k="${k}"><span class="dot" style="background:${p.c}"></span>${esc(p.n)}</button>`).join('');
+  $('#lChips').querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const k = +b.dataset.k; L.right.has(k) ? L.right.delete(k) : L.right.add(k); b.classList.toggle('sel'); });
+};
+$('#lNext').onclick = () => {
+  const r = L.rounds[L.i];
+  L.right.forEach(k => L.sc[k] += 100);
+  L.sc[r.o] += 50 * (L.players.length - 1 - L.right.size);
+  if (L.i + 1 < L.rounds.length) { L.i++; drawLround(); }
+  else { drawLscore(); $('#lRevBox').hidden = true; $('#lReveal').hidden = true; $('#lRound').textContent = 'Fertig!'; $('#lLink').hidden = true; $('#lVid').innerHTML = ''; $('#lHint').textContent = 'Das war die letzte Runde. Hier ist der Endstand.'; }
+};
+function drawLscore(){
+  $('#lLink').hidden = false;
+  $('#lScore').innerHTML = L.players.map((p, k) => ({ p, k })).sort((a, b) => L.sc[b.k] - L.sc[a.k]).map((x, i) =>
+    `<li><span class="pos">${i + 1}</span><span class="dot" style="background:${x.p.c}"></span><span class="nm">${esc(x.p.n)}</span><span class="pts">${fmt(L.sc[x.k] || 0)}</span></li>`).join('');
+}
+})();
+</script>
+</body>
+</html>
