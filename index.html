@@ -96,6 +96,17 @@ details[open] summary{margin-bottom:8px}
 .vid{width:100%;display:flex;justify-content:center}
 .vid:empty{display:none}
 .vid iframe{width:100%;max-width:400px;height:min(70vh,calc((100vw - 64px)*16/9));border:0;border-radius:16px;background:#000}
+.playwrap{padding-bottom:96px!important}
+.bigvid iframe{height:calc(100vh - 230px);height:calc(100dvh - 230px);min-height:320px;width:min(100%,calc((100dvh - 230px)*9/16));max-width:100%}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:15;max-width:560px;margin:0 auto;background:#231a3ff2;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border:1px solid var(--line);border-bottom:0;border-radius:24px 24px 0 0;box-shadow:0 -12px 40px #0008;
+  padding:6px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  transition:transform .28s ease;touch-action:none;display:flex;flex-direction:column;gap:10px}
+.sheet.closed{transform:translateY(calc(100% - 76px - env(safe-area-inset-bottom,0px)))}
+@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
+.grab{width:44px;height:5px;border-radius:9px;background:var(--mute);opacity:.6;margin:4px auto 0}
+.sheethead{background:none;padding:6px 0;justify-content:space-between;font-family:var(--display);font-weight:400;font-size:1.15rem;width:100%}
+.sheetbody{display:flex;flex-direction:column;gap:10px}
 .steps{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
 </style>
 </head>
@@ -171,18 +182,21 @@ details[open] summary{margin-bottom:8px}
   </section>
 
   <!-- PLAY -->
-  <section id="s-play" hidden class="wrap" style="padding:0">
+  <section id="s-play" hidden class="wrap playwrap" style="padding:0">
     <div class="meta"><span class="label" id="playRound">Runde 1 / 9</span><span id="playTime" class="label">45 s</span></div>
     <div class="timer"><i id="playBar" style="width:100%"></i></div>
-    <div class="card" style="align-items:center;text-align:center">
-      <div class="heart beat">♥</div>
-      <h2>Wer hat das geliked?</h2>
-      <div id="playVid" class="vid"></div>
-      <a id="playLink" class="btn ghost wide" href="#" target="_blank" rel="noopener">Video in TikTok öffnen ↗</a>
-      <p id="ownNote" class="note" hidden>Das ist eines deiner Likes! Tipp trotzdem jemanden, damit es niemand merkt.</p>
+    <div id="playVid" class="vid bigvid"></div>
+    <a id="playLink" class="btn ghost wide" href="#" target="_blank" rel="noopener">Video in TikTok öffnen ↗</a>
+    <div id="sheet" class="sheet">
+      <div class="grab" aria-hidden="true"></div>
+      <button id="sheetToggle" class="sheethead" aria-expanded="true" aria-controls="sheetBody">
+        <span>Wer hat's geliked?</span><span id="sheetHint" class="small mute">nach unten wischen</span></button>
+      <div id="sheetBody" class="sheetbody">
+        <p id="ownNote" class="note" hidden>Das ist eines deiner Likes! Du musst nicht abstimmen. Schau einfach unauffällig mit.</p>
+        <div id="playChips" class="chips"></div>
+        <p id="playStatus" class="mute small"></p>
+      </div>
     </div>
-    <div id="playChips" class="chips"></div>
-    <p id="playStatus" class="mute small"></p>
   </section>
 
   <!-- REVEAL -->
@@ -282,7 +296,7 @@ if (!K) { K = rid() + rid(); try { sessionStorage.setItem('hv-k', K); } catch(e)
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 3200); }
 function show(id){ document.querySelectorAll('section[id^="s-"]').forEach(s => { s.hidden = s.id !== id; if (s.hidden) s.querySelectorAll('.vid').forEach(v => v.innerHTML = ''); }); window.scrollTo(0, 0); }
 function setVid(sel, it){ const el = document.querySelector(sel); it = String(it || '');
-  el.innerHTML = /^\d+$/.test(it) ? `<iframe src="https://www.tiktok.com/player/v1/${it}?description=0&music_info=0&rel=0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen title="TikTok-Video"></iframe>` : ''; }
+  el.innerHTML = /^\d+$/.test(it) ? `<iframe src="https://www.tiktok.com/player/v1/${it}?autoplay=1&description=0&music_info=0&rel=0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen title="TikTok-Video"></iframe>` : ''; }
 
 /* ---------- Likes einlesen ---------- */
 function normItem(s){
@@ -587,6 +601,16 @@ function scoreHtml(hv, res){
   }).join('');
 }
 let lastPh = '';
+const sheet = $('#sheet'); let sy = null, swiped = false;
+function setSheet(open){ sheet.classList.toggle('closed', !open); $('#sheetToggle').setAttribute('aria-expanded', open); $('#sheetHint').textContent = open ? 'nach unten wischen' : 'nach oben wischen'; }
+sheet.addEventListener('pointerdown', e => { sy = e.clientY; swiped = false; });
+window.addEventListener('pointerup', e => {
+  if (sy === null) return; const dy = e.clientY - sy; sy = null;
+  if (dy > 40) { setSheet(false); swiped = true; } else if (dy < -40) { setSheet(true); swiped = true; }
+});
+window.addEventListener('pointercancel', () => { sy = null; });
+$('#sheetToggle').onclick = () => { if (swiped) { swiped = false; return; } setSheet(sheet.classList.contains('closed')); };
+sheet.addEventListener('click', e => { if (swiped && e.target.closest('.chip')) { e.stopPropagation(); e.preventDefault(); swiped = false; } }, true);
 function onRoom(){
   if (!S.pin) return;
   const hv = hostView();
@@ -594,20 +618,21 @@ function onRoom(){
   const m = plMap(hv), rk = hv.id + ':' + hv.i;
   if (hv.ph === 'play') {
     if (S.roundKey !== rk) { S.roundKey = rk; S.localStart = Date.now(); S.guess = null; push(); }
-    if (lastPh !== 'play:' + rk) { show('s-play'); lastPh = 'play:' + rk; setVid('#playVid', hv.v); }
+    if (lastPh !== 'play:' + rk) { show('s-play'); lastPh = 'play:' + rk; setVid('#playVid', hv.v); setSheet(true); }
     $('#playRound').textContent = `Runde ${hv.i + 1} / ${hv.n}`;
     $('#playLink').href = linkFor(String(hv.v || ''));
     const own = S.imp.pool.includes(hv.v);
-    $('#ownNote').hidden = !own;
+    $('#ownNote').hidden = !own; $('#playChips').hidden = own;
     const picked = S.guess && S.guess.r === rk ? S.guess.p : null;
     $('#playChips').innerHTML = Object.keys(m).map(k => `<button class="chip${picked === k ? ' sel' : ''}" data-k="${esc(k)}" ${picked ? 'disabled' : ''}>
       <span class="dot" style="background:${m[k].c}"></span>${esc(m[k].n)}${k === K ? ' (du)' : ''}</button>`).join('');
     $('#playChips').querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
       if (S.guess && S.guess.r === rk) return;
-      S.guess = { r: rk, p: b.dataset.k, t: Date.now() - S.localStart }; push(); onRoom();
+      S.guess = { r: rk, p: b.dataset.k, t: Date.now() - S.localStart }; push(); onRoom(); setTimeout(() => setSheet(false), 600);
     });
     const ros = roster(); const done = Object.keys(m).filter(k => { const x = ros.find(y => y.k === k); return x && x.gs && x.gs.r === rk; }).length;
-    $('#playStatus').textContent = picked ? `Getippt! ${done} von ${Object.keys(m).length} haben gewählt.` : 'Tippe auf die Person, die es geliked hat. Schnell sein gibt Extrapunkte.';
+    const voters = Math.max(1, Object.keys(m).length - 1);
+    $('#playStatus').textContent = own ? `${done} von ${voters} haben gewählt.` : picked ? `Getippt! ${done} von ${voters} haben gewählt.` : 'Tippe auf die Person, die es geliked hat. Schnell sein gibt Extrapunkte.';
     tickTimer();
   } else if (hv.ph === 'rev') {
     if (lastPh !== 'rev:' + rk) { show('s-rev'); lastPh = 'rev:' + rk; }
